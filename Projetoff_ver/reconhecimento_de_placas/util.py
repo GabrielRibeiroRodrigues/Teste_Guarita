@@ -1,10 +1,9 @@
 import string
 import easyocr
 import pandas as pd
-import pytesseract
-from PIL import Image
-import cv2
-#Meu leitor de caracteres
+
+
+
 reader = easyocr.Reader(['en'], gpu=False)
 
 
@@ -14,14 +13,16 @@ dict_char_to_int = {'O': '0',
                     'J': '3',
                     'A': '4',
                     'G': '6',
-                    'S': '5'}
+                    'S': '5',
+                    }
 
 dict_int_to_char = {'0': 'O',
                     '1': 'I',
                     '3': 'J',
                     '4': 'A',
                     '6': 'G',
-                    '5': 'S'}
+                    '5': 'S',
+                    'H': 'W'}
 
 
 def write_csv(results, output_path):
@@ -48,17 +49,15 @@ def write_csv(results, output_path):
 
 import re
 
-#Os dois formatos de placa de que eu posso receber
 def license_complies_format(text):
-    # Verifica se o comprimento é de 7 caracteres já que ambos tem 7
-    
+      
     if len(text) != 7:
         return False
     
     
     
 
-    #Teste
+    # Teste
     if (text[0] in string.ascii_uppercase or text[0] in dict_int_to_char.keys()) and \
        (text[1] in string.ascii_uppercase or text[1] in dict_int_to_char.keys()) and \
        (text[2] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[2] in dict_char_to_int.keys()) and \
@@ -67,7 +66,7 @@ def license_complies_format(text):
        (text[5] in string.ascii_uppercase or text[5] in dict_int_to_char.keys()) and \
        (text[6] in string.ascii_uppercase or text[6] in dict_int_to_char.keys()):
         return True
-     #Teste2
+     
 
     #Formato padrão
     if (text[0] in string.ascii_uppercase or text[0] in dict_int_to_char.keys()) and \
@@ -169,34 +168,10 @@ def get_car(placa, vehicle_track_ids):
     return -1, -1, -1, -1, -1
 
 def carrega_placas_registradas(csv_path):
-    """Carrega as placas cadastradas, nome do proprietário e veículo de um arquivo CSV."""
     placas_reg = pd.read_csv(csv_path)
-        # Criar um dicionário onde a chave é a placa e o valor são as informações do proprietário e veículo
     placas_dict = {}
     for index, row in placas_reg.iterrows():
-          placas_dict[row['placa']] = {'proprietario': row['proprietario'], 'veiculo': row['veiculo']}
+          placas_dict[row['placa']] = {'proprietario': row['proprietario'], 'veiculo': row['veiculo'],'cor': row['cor']}
     return placas_dict
-
-
-
-
-def check_plate_registration(plate_text, placas_registradas):
-    """Verifica se a placa detectada está cadastrada."""
-    return plate_text in placas_registradas
-
-def read_license_plate_tesseract(license_plate_crop):
-    # Converta o crop da placa em um formato compatível com o Tesseract (caso seja um NumPy array)
-    pil_image = Image.fromarray(license_plate_crop)
-    
-    # Faça a detecção de texto
-    text = pytesseract.image_to_string(pil_image, config='--psm 8')  # Use o modo 8 para uma única linha
-    
-    # Limpe e processe o texto
-    text = text.upper().replace(' ', '')
-
-    if license_complies_format(text):
-        return format_license(text), None  # Tesseract não retorna diretamente um score de confiança
-
-    return None, None
 
 

@@ -3,18 +3,17 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import keyboard  
-
 from sort.sort import Sort
-from util import get_car, read_license_plate, write_csv, check_plate_registration, carrega_placas_registradas,read_license_plate_tesseract
+from util import get_car, read_license_plate, write_csv, carrega_placas_registradas
 
 results = {}
 mot_tracker = Sort()
 
-# Exemplo de uso na parte do seu código onde as placas são detectadas
-placas_registradas = carrega_placas_registradas('C:\\Users\\Pichau\\Desktop\\planilha.csv')
+
+placas_registradas = carrega_placas_registradas('C:\\Users\\Yasmin Pereira\\Desktop\\Projetoff_ver\\planilha.csv')
 detector_carro = YOLO('yolov8n.pt')
-detector_placa = YOLO("C:\\Users\\Pichau\\Desktop\\best (4).pt")
-cap = cv2.VideoCapture("C:\\Users\\Pichau\\Desktop\\video.mp4")
+detector_placa = YOLO("C:\\Users\\Yasmin Pereira\\Desktop\\best (4).pt")
+cap = cv2.VideoCapture("C:\\Users\\Yasmin Pereira\\Desktop\\cmp.mp4")
 
 veiculos = [2, 3, 5, 7]  
 confianca_detectar_carro = 0.0  
@@ -89,7 +88,7 @@ while ret:
                     if license_plate_text in placas_registradas:
                         info = placas_registradas[license_plate_text]
                         print(f"A placa {license_plate_text} já está registrada.")
-                        print(f"Proprietário: {info['proprietario']}, Veículo: {info['veiculo']}")
+                        print(f"Proprietário: {info['proprietario']}, Veículo: {info['veiculo']}, Cor do Veículo: {info['cor']}")
                     else:
                         print(f"A placa {license_plate_text} não está registrada.")
 
@@ -109,10 +108,10 @@ while ret:
         else:
             print("Nenhum veículo correspondente à placa foi detectado.")
 
-    # Exibir o frame atual
+   
     ax.clear()
-    ax.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  # Converter BGR para RGB
-    ax.axis('off')  # Ocultar os eixos
+    ax.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  
+    ax.axis('off')  
 
     # Desenhar bounding boxes para veículos detectados
     for veh in veiculos_detectados:
@@ -134,7 +133,7 @@ while ret:
 
    
         
-write_csv(results, 'C:\\Users\\Pichau\\Desktop\\Projetoff_ver\\test.csv')
+write_csv(results, 'C:\\Users\\Yasmin Pereira\\Desktop\\Projetoff_ver\\test.csv')
 
 
 cap.release()

@@ -4,16 +4,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import keyboard  
 from sort.sort import Sort
-from util import get_car, read_license_plate, write_csv, carrega_placas_registradas
+from util import ler_carro, ler_placas, escrever_csv, carrega_placas_registradas
 
 results = {}
 mot_tracker = Sort()
 
-
-placas_registradas = carrega_placas_registradas('C:\\Users\\Yasmin Pereira\\Desktop\\Projetoff_ver\\planilha.csv')
+placas_registradas = carrega_placas_registradas('C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\planilha.csv')
 detector_carro = YOLO('yolov8n.pt')
-detector_placa = YOLO("C:\\Users\\Yasmin Pereira\\Desktop\\best (4).pt")
-cap = cv2.VideoCapture("C:\\Users\\Yasmin Pereira\\Desktop\\cmp.mp4")
+detector_placa = YOLO("C:\\Users\\12265587630\\Desktop\\best (4).pt")
+cap = cv2.VideoCapture("C:\\Users\\12265587630\\Desktop\\paulo\\ffff.mp4")
 
 veiculos = [2, 3, 5, 7]  
 confianca_detectar_carro = 0.0  
@@ -21,19 +20,21 @@ confianca_gravar_texto = 0.0
 maior_confianca = 0.0
 frame_nmr = -1
 ret = True
-
+intervalo_frames = 1 # Lugar onde eu defino o intervalo de frames que o algoritmo va ler
 
 plt.ion()  
 fig, ax = plt.subplots()
 
 
 while ret:
-    frame_nmr += 1
-    ret, frame = cap.read()  
-    if not ret:  
-        print("Não foi possível ler o frame.")
-        break
-
+    for i in range(intervalo_frames):
+        frame_nmr += 1
+        ret, frame = cap.read()
+        if not ret or frame is None:
+            print(f"Não foi possível ler o frame {frame_nmr}.")
+            break
+    if frame is None:
+        continue
     results[frame_nmr] = {}
 
     # Detecção de veículos usando o modelo de veículos
@@ -67,7 +68,7 @@ while ret:
         print(f"Placa detectada no frame {frame_nmr} com coordenadas: ({x1}, {y1}), ({x2}, {y2}) e confiança {score}")
 
         # Verificar qual veículo corresponde à placa
-        xcar1, ycar1, xcar2, ycar2, car_id = get_car(placa, track_ids)
+        xcar1, ycar1, xcar2, ycar2, car_id = ler_carro(placa, track_ids)
 
         if car_id != -1:
             # Verificação de limites
@@ -76,14 +77,14 @@ while ret:
                 # Recortar a placa para processamento
                 license_plate_crop = frame[int(y1):int(y2), int(x1):int(x2)]
                 license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
-                _, license_plate_crop_thresh = cv2.threshold(license_plate_crop_gray        , 64, 255, cv2.THRESH_BINARY_INV)
+                _, license_plate_crop_thresh = cv2.threshold(license_plate_crop_gray, 64, 255, cv2.THRESH_BINARY_INV)
 
                 # Ler o texto da placa
-                license_plate_text, license_plate_text_score = read_license_plate(license_plate_crop_thresh)
+                license_plate_text, license_plate_text_score = ler_placas(license_plate_crop_thresh)
                 print(f"Texto da placa detectado: {license_plate_text}, Confiança: {license_plate_text_score}")
 
                 if license_plate_text is not None and license_plate_text_score > confianca_gravar_texto  :
-                    # maior_confianca = license_plate_text_score
+                    
                     # Verificar se a placa já está registrada
                     if license_plate_text in placas_registradas:
                         info = placas_registradas[license_plate_text]
@@ -133,7 +134,7 @@ while ret:
 
    
         
-write_csv(results, 'C:\\Users\\Yasmin Pereira\\Desktop\\Projetoff_ver\\test.csv')
+escrever_csv(results, 'C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\test.csv')
 
 
 cap.release()

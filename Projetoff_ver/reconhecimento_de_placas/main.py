@@ -41,9 +41,9 @@ while ret:
     detections_veiculos = detector_carro(frame)[0]
     veiculos_detectados = []
     for detection in detections_veiculos.boxes.data.tolist():
-        x1, y1, x2, y2, score, class_id = detection
-        if score >= confianca_detectar_carro and int(class_id) in veiculos:
-            veiculos_detectados.append([x1, y1, x2, y2, score])
+        x1, y1, x2, y2, confianca_atual, class_id = detection
+        if confianca_atual >= confianca_detectar_carro and int(class_id) in veiculos:
+            veiculos_detectados.append([x1, y1, x2, y2, confianca_atual])
     print(f"Frame {frame_nmr} - Veículos detectados: {veiculos_detectados}")
 
     # Rastrear veículos
@@ -57,15 +57,15 @@ while ret:
     detections_placas = detector_placa(frame)[0]
     placas_detectadas = []
     for detection in detections_placas.boxes.data.tolist():
-        x1, y1, x2, y2, score, class_id = detection
-        if score >= confianca_detectar_carro:
-            placas_detectadas.append([x1, y1, x2, y2, score])
+        x1, y1, x2, y2, confianca_atual, class_id = detection
+        if confianca_atual >= confianca_detectar_carro:
+            placas_detectadas.append([x1, y1, x2, y2, confianca_atual])
     print(f"Frame {frame_nmr} - Placas detectadas: {placas_detectadas}")
 
     # Atribuir as placas aos veículos detectados
     for placa in placas_detectadas:
-        x1, y1, x2, y2, score = placa
-        print(f"Placa detectada no frame {frame_nmr} com coordenadas: ({x1}, {y1}), ({x2}, {y2}) e confiança {score}")
+        x1, y1, x2, y2, confianca_atual = placa
+        print(f"Placa detectada no frame {frame_nmr} com coordenadas: ({x1}, {y1}), ({x2}, {y2}) e confiança {confianca_atual}")
 
         # Verificar qual veículo corresponde à placa
         xcar1, ycar1, xcar2, ycar2, car_id = ler_carro(placa, track_ids)
@@ -80,26 +80,26 @@ while ret:
                 _, placa_carro_crop_thresh = cv2.threshold(placa_carro_crop_gray, 64, 255, cv2.THRESH_BINARY_INV)
 
                 # Ler o texto da placa
-                license_plate_text, license_plate_text_score = ler_placas(placa_carro_crop_thresh)
-                print(f"Texto da placa detectado: {license_plate_text}, Confiança: {license_plate_text_score}")
+                texto_detectado, confianca_texto_detectado = ler_placas(placa_carro_crop_thresh)
+                print(f"Texto da placa detectado: {texto_detectado}, Confiança: {confianca_texto_detectado}")
 
-                if license_plate_text is not None and license_plate_text_score > confianca_gravar_texto  :
+                if texto_detectado is not None and confianca_texto_detectado > confianca_gravar_texto  :
                     
                     # Verificar se a placa já está registrada
-                    if license_plate_text in placas_registradas:
-                        info = placas_registradas[license_plate_text]
-                        print(f"A placa {license_plate_text} já está registrada.")
+                    if texto_detectado in placas_registradas:
+                        info = placas_registradas[texto_detectado]
+                        print(f"A placa {texto_detectado} já está registrada.")
                         print(f"Proprietário: {info['proprietario']}, Veículo: {info['veiculo']}, Cor do Veículo: {info['cor']}")
                     else:
-                        print(f"A placa {license_plate_text} não está registrada.")
+                        print(f"A placa {texto_detectado} não está registrada.")
 
                     results[frame_nmr][car_id] = {
                         'car': {'bbox': [xcar1, ycar1, xcar2, ycar2]},
                         'placa': {
                             'bbox': [x1, y1, x2, y2],
-                            'text': license_plate_text,
-                            'bbox_score': score,
-                            'text_score': license_plate_text_score
+                            'text': texto_detectado,
+                            'bbox_score': confianca_atual,
+                            'text_score': confianca_texto_detectado
                         }
                     }
                 else:
@@ -121,8 +121,8 @@ while ret:
         ax.add_patch(rect)
 
     # Desenhar bounding boxes para placas detectadas
-    for plate in placas_detectadas:
-        x1, y1, x2, y2, score = plate
+    for placa in placas_detectadas:
+        x1, y1, x2, y2, score = placa
         rect = plt.Rectangle((x1, y1), x2 - x1, y2 - y1, fill=False, color='red', linewidth=2)
         ax.add_patch(rect)
 

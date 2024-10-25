@@ -130,8 +130,8 @@ def formato_placa(text):
 
 
 #Lê os caracteres que estão na placa
-def ler_placas(license_plate_crop):
-    detections = reader.readtext(license_plate_crop)
+def ler_placas(placa_carro_crop):
+    detections = reader.readtext(placa_carro_crop)
 
     for detection in detections:
         bbox, text, score = detection

@@ -75,12 +75,12 @@ while ret:
             if (0 <= x1 < frame.shape[1] and 0 <= x2 < frame.shape[1] and
                 0 <= y1 < frame.shape[0] and 0 <= y2 < frame.shape[0]):
                 # Recortar a placa para processamento
-                license_plate_crop = frame[int(y1):int(y2), int(x1):int(x2)]
-                license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
-                _, license_plate_crop_thresh = cv2.threshold(license_plate_crop_gray, 64, 255, cv2.THRESH_BINARY_INV)
+                placa_carro_crop = frame[int(y1):int(y2), int(x1):int(x2)]
+                placa_carro_crop_gray = cv2.cvtColor(placa_carro_crop, cv2.COLOR_BGR2GRAY)
+                _, placa_carro_crop_thresh = cv2.threshold(placa_carro_crop_gray, 64, 255, cv2.THRESH_BINARY_INV)
 
                 # Ler o texto da placa
-                license_plate_text, license_plate_text_score = ler_placas(license_plate_crop_thresh)
+                license_plate_text, license_plate_text_score = ler_placas(placa_carro_crop_thresh)
                 print(f"Texto da placa detectado: {license_plate_text}, Confiança: {license_plate_text_score}")
 
                 if license_plate_text is not None and license_plate_text_score > confianca_gravar_texto  :

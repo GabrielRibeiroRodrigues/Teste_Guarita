@@ -161,11 +161,28 @@ def ler_carro(placa, vehicle_track_ids):
 
     return -1, -1, -1, -1, -1
 
-def carrega_placas_registradas(csv_path):
-    placas_reg = pd.read_csv(csv_path)
-    placas_dict = {}
-    for index, row in placas_reg.iterrows():
-          placas_dict[row['placa']] = {'proprietario': row['proprietario'], 'veiculo': row['veiculo'],'cor': row['cor']}
-    return placas_dict
+def escrever_csv(results, output_path):
+    with open(output_path, 'w') as f:
+        f.write('{},{},{},{},{}\n'.format('frame_nmr', 'car_id',
+                                                'license_plate_bbox_score', 'license_number',
+                                                'license_number_score'))
+
+        for frame_nmr in results.keys():
+            for car_id in results[frame_nmr].keys():
+                print(results[frame_nmr][car_id])
+                if 'car' in results[frame_nmr][car_id].keys() and \
+                   'placa' in results[frame_nmr][car_id].keys() and \
+                   'text' in results[frame_nmr][car_id]['placa'].keys():
+                    f.write('{},{},{},{},{}\n'.format(frame_nmr,
+                                                            car_id,
+                                                            
+                                                            results[frame_nmr][car_id]['placa']['bbox_score'],
+                                                            results[frame_nmr][car_id]['placa']['text'],
+                                                            results[frame_nmr][car_id]['placa']['text_score'])
+                            )
+        f.close()
+
+
+
 
 

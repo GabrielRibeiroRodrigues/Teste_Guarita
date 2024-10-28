@@ -4,12 +4,81 @@ import numpy as np
 import matplotlib.pyplot as plt
 import keyboard  
 from sort.sort import Sort
-from util import ler_carro, ler_placas, escrever_csv, carrega_placas_registradas
+from util import ler_carro, ler_placas, escrever_csv
+import psycopg2
+import os
+from datetime import datetime
+
+data_e_hora_atuais = datetime.now()
+data_e_hora_em_texto = data_e_hora_atuais.strftime('%d/%m/%Y %H:%M')
+print('teste::')
+print(data_e_hora_em_texto)
 
 results = {}
 mot_tracker = Sort()
 
-placas_registradas = carrega_placas_registradas('C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\planilha.csv')
+conexao = psycopg2.connect(
+    dbname="pci_transito",
+    user="postgres",
+    password="123456",
+    host="localhost",
+    port="5432"
+)
+cursor = conexao.cursor()
+
+def salvar_no_postgres(frame_nmr, car_id, license_number, license_number_score):
+    try:
+        comando_sql = """
+        INSERT INTO transito_leitura (frame_nmr,car_id,license_number,license_number_score)
+        VALUES (%s, %s, %s,%s);
+        """
+        valores = (frame_nmr, car_id,  license_number, license_number_score)
+        cursor.execute(comando_sql, valores)
+        conexao.commit()
+        print(f"Dados do carro {car_id} salvos no banco de dados.")
+    except Exception as e:
+        print(f"Erro ao inserir dados: {e}")    
+        conexao.rollback()
+
+def salvar_registro_frequencia(data,placa, proprietario):
+    try:
+        comando_sql = """
+        INSERT INTO transito_registro (data,placa, proprietario)
+        VALUES (%s,%s, %s);
+        """
+        valores = (data, placa , proprietario)
+        cursor.execute(comando_sql, valores)
+        conexao.commit()
+        print("salvo no banco de dados.")
+    except Exception as e:
+        print(f"Erro ao inserir dados: {e}")    
+        conexao.rollback()
+
+def verificar_placa_registrada(placa, cursor):
+    try:
+        comando_sql = """
+        SELECT prorietario, veiculo, cor FROM transito_placa
+        WHERE placa = %s;
+        """
+        cursor.execute(comando_sql, (placa,))
+        resultado = cursor.fetchone()
+        if resultado:
+            return {
+                "proprietario": resultado[0],
+                "veiculo": resultado[1],
+                "cor": resultado[2]
+            }
+        else:
+            return None
+    except Exception as e:
+        print(f"Erro ao verificar placa no banco de dados: {e}")
+        return None
+output_folder = "C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\img_placas_detectadas"
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+
+
 detector_carro = YOLO('yolov8n.pt')
 detector_placa = YOLO("C:\\Users\\12265587630\\Desktop\\best (4).pt")
 cap = cv2.VideoCapture("C:\\Users\\12265587630\\Desktop\\paulo\\ffff.mp4")
@@ -83,11 +152,14 @@ while ret:
                 texto_detectado, confianca_texto_detectado = ler_placas(placa_carro_crop_thresh)
                 print(f"Texto da placa detectado: {texto_detectado}, Confiança: {confianca_texto_detectado}")
 
-                if texto_detectado is not None and confianca_texto_detectado > confianca_gravar_texto  :
+                if texto_detectado is not None and confianca_texto_detectado > confianca_gravar_texto:
+                    salvar_no_postgres(frame_nmr, car_id, texto_detectado, confianca_texto_detectado)
                     
                     # Verificar se a placa já está registrada
-                    if texto_detectado in placas_registradas:
-                        info = placas_registradas[texto_detectado]
+                    info = verificar_placa_registrada(texto_detectado, cursor)
+                    if info:
+                        salvar_registro_frequencia(data_e_hora_em_texto, texto_detectado, info['proprietario'])
+
                         print(f"A placa {texto_detectado} já está registrada.")
                         print(f"Proprietário: {info['proprietario']}, Veículo: {info['veiculo']}, Cor do Veículo: {info['cor']}")
                     else:
@@ -102,8 +174,11 @@ while ret:
                             'text_score': confianca_texto_detectado
                         }
                     }
-                else:
-                    print("Nenhuma placa reconhecida ou nível de confiança inferior aos anteriores.")
+                    filename = os.path.join(output_folder, f"{texto_detectado}.jpg")
+                    if not os.path.isfile(filename):
+                        cv2.imwrite(filename, placa_carro_crop)
+                    else:
+                        print("Nenhuma placa reconhecida ou nível de confiança inferior aos anteriores.")
             else:
                 print(f"Coordenadas de recorte fora dos limites: ({x1}, {y1}), ({x2}, {y2})")
         else:
@@ -128,14 +203,22 @@ while ret:
 
     plt.pause(0.00001)  # Pausa para atualizar a visualização
 
-    # Verificar se a tecla 'q' foi pressionada
+    
     if keyboard.is_pressed('q'):
-        break  # Encerra o loop
+        break  
 
-   
-        
+
 escrever_csv(results, 'C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\test.csv')
-
-
 cap.release()
 plt.close(fig)
+
+# registro_entrada
+# placa c e
+# proprietario c e
+# data/hora entrada
+
+# registro_saida
+# placa c e
+# proprietario c e
+# data/hora saida
+

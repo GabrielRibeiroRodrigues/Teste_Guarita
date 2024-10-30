@@ -9,6 +9,7 @@ import psycopg2
 import os
 from datetime import datetime
 
+
 data_e_hora_atuais = datetime.now()
 data_e_hora_em_texto = data_e_hora_atuais.strftime('%d/%m/%Y %H:%M')
 print('teste::')
@@ -40,13 +41,13 @@ def salvar_no_postgres(frame_nmr, car_id, license_number, license_number_score):
         print(f"Erro ao inserir dados: {e}")    
         conexao.rollback()
 
-def salvar_registro_frequencia(data,placa, proprietario):
+def salvar_registro_frequencia(data,placa):
     try:
         comando_sql = """
-        INSERT INTO transito_registro (data,placa, proprietario)
-        VALUES (%s,%s, %s);
+        INSERT INTO transito_registro (data,placa)
+        VALUES (%s,%s);
         """
-        valores = (data, placa , proprietario)
+        valores = (data, placa)
         cursor.execute(comando_sql, valores)
         conexao.commit()
         print("salvo no banco de dados.")
@@ -57,7 +58,7 @@ def salvar_registro_frequencia(data,placa, proprietario):
 def verificar_placa_registrada(placa, cursor):
     try:
         comando_sql = """
-        SELECT prorietario, veiculo, cor FROM transito_placa
+        SELECT proprietario, veiculo, cor FROM transito_placa
         WHERE placa = %s;
         """
         cursor.execute(comando_sql, (placa,))
@@ -73,9 +74,9 @@ def verificar_placa_registrada(placa, cursor):
     except Exception as e:
         print(f"Erro ao verificar placa no banco de dados: {e}")
         return None
-output_folder = "C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\img_placas_detectadas"
-if not os.path.exists(output_folder):
-    os.makedirs(output_folder)
+# output_folder = "C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\img_placas_detectadas"
+# if not os.path.exists(output_folder):
+#     os.makedirs(output_folder)
 
 
 
@@ -84,12 +85,12 @@ detector_placa = YOLO("C:\\Users\\12265587630\\Desktop\\best (4).pt")
 cap = cv2.VideoCapture("C:\\Users\\12265587630\\Desktop\\paulo\\ffff.mp4")
 
 veiculos = [2, 3, 5, 7]  
-confianca_detectar_carro = 0.0  
-confianca_gravar_texto = 0.0
-maior_confianca = 0.0
+confianca_detectar_carro = 0.5  
+confianca_gravar_texto = 0.5
 frame_nmr = -1
 ret = True
-intervalo_frames = 1 # Lugar onde eu defino o intervalo de frames que o algoritmo va ler
+intervalo_frames = 1 # Lugar onde eu defino o intervalo de frames que o algoritmo vai ler
+pular_frames = 5
 
 plt.ion()  
 fig, ax = plt.subplots()
@@ -158,7 +159,7 @@ while ret:
                     # Verificar se a placa já está registrada
                     info = verificar_placa_registrada(texto_detectado, cursor)
                     if info:
-                        salvar_registro_frequencia(data_e_hora_em_texto, texto_detectado, info['proprietario'])
+                        salvar_registro_frequencia(data_e_hora_em_texto, texto_detectado)
 
                         print(f"A placa {texto_detectado} já está registrada.")
                         print(f"Proprietário: {info['proprietario']}, Veículo: {info['veiculo']}, Cor do Veículo: {info['cor']}")
@@ -174,11 +175,11 @@ while ret:
                             'text_score': confianca_texto_detectado
                         }
                     }
-                    filename = os.path.join(output_folder, f"{texto_detectado}.jpg")
-                    if not os.path.isfile(filename):
-                        cv2.imwrite(filename, placa_carro_crop)
-                    else:
-                        print("Nenhuma placa reconhecida ou nível de confiança inferior aos anteriores.")
+                    # filename = os.path.join(output_folder, f"{texto_detectado}.jpg")
+                    # if not os.path.isfile(filename):
+                    #     cv2.imwrite(filename, placa_carro_crop)
+                    # else:
+                    #     print("Nenhuma placa reconhecida ou nível de confiança inferior aos anteriores.")
             else:
                 print(f"Coordenadas de recorte fora dos limites: ({x1}, {y1}), ({x2}, {y2})")
         else:

@@ -41,13 +41,13 @@ def salvar_no_postgres(frame_nmr, car_id, license_number, license_number_score):
         print(f"Erro ao inserir dados: {e}")    
         conexao.rollback()
 
-def salvar_registro_frequencia(data,placa):
+def salvar_registro_frequencia(data,placa,registro):
     try:
         comando_sql = """
-        INSERT INTO transito_registro (data,placa)
-        VALUES (%s,%s);
+        INSERT INTO transito_registro (data,placa,tipo)
+        VALUES (%s,%s,%s);
         """
-        valores = (data, placa)
+        valores = (data, placa,registro)
         cursor.execute(comando_sql, valores)
         conexao.commit()
         print("salvo no banco de dados.")
@@ -157,9 +157,14 @@ while ret:
                     salvar_no_postgres(frame_nmr, car_id, texto_detectado, confianca_texto_detectado)
                     
                     # Verificar se a placa já está registrada
+                    if cap:
+                        registro = 'Entrada'
+                    else:
+                        registro = 'Saida'
                     info = verificar_placa_registrada(texto_detectado, cursor)
+                    
                     if info:
-                        salvar_registro_frequencia(data_e_hora_em_texto, texto_detectado)
+                        salvar_registro_frequencia(data_e_hora_em_texto, texto_detectado, registro)
 
                         print(f"A placa {texto_detectado} já está registrada.")
                         print(f"Proprietário: {info['proprietario']}, Veículo: {info['veiculo']}, Cor do Veículo: {info['cor']}")
@@ -213,13 +218,4 @@ escrever_csv(results, 'C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\test.csv'
 cap.release()
 plt.close(fig)
 
-# registro_entrada
-# placa c e
-# proprietario c e
-# data/hora entrada
-
-# registro_saida
-# placa c e
-# proprietario c e
-# data/hora saida
 

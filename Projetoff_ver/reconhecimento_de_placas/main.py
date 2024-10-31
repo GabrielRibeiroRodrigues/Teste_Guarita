@@ -4,15 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import keyboard  
 from sort.sort import Sort
-from util import ler_carro, ler_placas, escrever_csv
+from util import ler_carro, ler_placas
 import psycopg2
-import os
 from datetime import datetime
 
 
 data_e_hora_atuais = datetime.now()
-data_e_hora_em_texto = data_e_hora_atuais.strftime('%d/%m/%Y %H:%M')
-print('teste::')
+data_e_hora_em_texto = data_e_hora_atuais.strftime('%d/%m/%Y %H:%M:%S')
 print(data_e_hora_em_texto)
 
 results = {}
@@ -74,23 +72,35 @@ def verificar_placa_registrada(placa, cursor):
     except Exception as e:
         print(f"Erro ao verificar placa no banco de dados: {e}")
         return None
-# output_folder = "C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\img_placas_detectadas"
-# if not os.path.exists(output_folder):
-#     os.makedirs(output_folder)
-
-
+def verificar_camera(porta, cursor):
+    try:
+        comando_sql = """
+        SELECT local_instalacao FROM transito_cameras
+        WHERE porta = %s;
+        """
+        cursor.execute(comando_sql, (porta,))
+        resultado = cursor.fetchone()
+        if resultado:
+            return  resultado[0],
+            
+        else:
+            return None
+    except Exception as e:
+        print(f"Erro ao verificar camera no banco de dados: {e}")
+        return None
 
 detector_carro = YOLO('yolov8n.pt')
 detector_placa = YOLO("C:\\Users\\12265587630\\Desktop\\best (4).pt")
 cap = cv2.VideoCapture("C:\\Users\\12265587630\\Desktop\\paulo\\ffff.mp4")
-
+porta = 3
 veiculos = [2, 3, 5, 7]  
 confianca_detectar_carro = 0.5  
 confianca_gravar_texto = 0.5
 frame_nmr = -1
 ret = True
-intervalo_frames = 1 # Lugar onde eu defino o intervalo de frames que o algoritmo vai ler
-pular_frames = 5
+intervalo_frames = 1 
+intervalo_espera = 30
+registro_placas = {}
 
 plt.ion()  
 fig, ax = plt.subplots()
@@ -157,12 +167,9 @@ while ret:
                     salvar_no_postgres(frame_nmr, car_id, texto_detectado, confianca_texto_detectado)
                     
                     # Verificar se a placa já está registrada
-                    if cap:
-                        registro = 'Entrada'
-                    else:
-                        registro = 'Saida'
-                    info = verificar_placa_registrada(texto_detectado, cursor)
                     
+                    info = verificar_placa_registrada(texto_detectado, cursor)
+                    registro = verificar_camera(porta,cursor)
                     if info:
                         salvar_registro_frequencia(data_e_hora_em_texto, texto_detectado, registro)
 
@@ -213,8 +220,6 @@ while ret:
     if keyboard.is_pressed('q'):
         break  
 
-
-escrever_csv(results, 'C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\test.csv')
 cap.release()
 plt.close(fig)
 

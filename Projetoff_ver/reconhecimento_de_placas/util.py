@@ -25,28 +25,6 @@ int_to_char = {'0': 'O',
                     }
 
 
-def escrever_csv(results, output_path):
-    with open(output_path, 'w') as f:
-        f.write('{},{},{},{},{}\n'.format('frame_nmr', 'car_id',
-                                                'license_plate_bbox_score', 'license_number',
-                                                'license_number_score'))
-
-        for frame_nmr in results.keys():
-            for car_id in results[frame_nmr].keys():
-                print(results[frame_nmr][car_id])
-                if 'car' in results[frame_nmr][car_id].keys() and \
-                   'placa' in results[frame_nmr][car_id].keys() and \
-                   'text' in results[frame_nmr][car_id]['placa'].keys():
-                    f.write('{},{},{},{},{}\n'.format(frame_nmr,
-                                                            car_id,
-                                                            
-                                                            results[frame_nmr][car_id]['placa']['bbox_score'],
-                                                            results[frame_nmr][car_id]['placa']['text'],
-                                                            results[frame_nmr][car_id]['placa']['text_score'])
-                            )
-        f.close()
-
-
 def license_complies_format(text):
       
     if len(text) != 7:

@@ -4,14 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import keyboard  
 from sort.sort import Sort
-from util import ler_carro, ler_placas
+from util import ler_carro, ler_placas, verificar_camera, salvar_no_postgres, salvar_registro_frequencia, verificar_placa_registrada
 import psycopg2
 from datetime import datetime
-
+import os
 
 data_e_hora_atuais = datetime.now()
 data_e_hora_em_texto = data_e_hora_atuais.strftime('%d/%m/%Y %H:%M:%S')
-print(data_e_hora_em_texto)
 
 results = {}
 mot_tracker = Sort()
@@ -25,83 +24,25 @@ conexao = psycopg2.connect(
 )
 cursor = conexao.cursor()
 
-def salvar_no_postgres(frame_nmr, car_id, license_number, license_number_score):
-    try:
-        comando_sql = """
-        INSERT INTO transito_leitura (frame_nmr,car_id,license_number,license_number_score)
-        VALUES (%s, %s, %s,%s);
-        """
-        valores = (frame_nmr, car_id,  license_number, license_number_score)
-        cursor.execute(comando_sql, valores)
-        conexao.commit()
-        print(f"Dados do carro {car_id} salvos no banco de dados.")
-    except Exception as e:
-        print(f"Erro ao inserir dados: {e}")    
-        conexao.rollback()
-
-def salvar_registro_frequencia(data,placa,registro):
-    try:
-        comando_sql = """
-        INSERT INTO transito_registro (data,placa,tipo)
-        VALUES (%s,%s,%s);
-        """
-        valores = (data, placa,registro)
-        cursor.execute(comando_sql, valores)
-        conexao.commit()
-        print("salvo no banco de dados.")
-    except Exception as e:
-        print(f"Erro ao inserir dados: {e}")    
-        conexao.rollback()
-
-def verificar_placa_registrada(placa, cursor):
-    try:
-        comando_sql = """
-        SELECT proprietario, veiculo, cor FROM transito_placa
-        WHERE placa = %s;
-        """
-        cursor.execute(comando_sql, (placa,))
-        resultado = cursor.fetchone()
-        if resultado:
-            return {
-                "proprietario": resultado[0],
-                "veiculo": resultado[1],
-                "cor": resultado[2]
-            }
-        else:
-            return None
-    except Exception as e:
-        print(f"Erro ao verificar placa no banco de dados: {e}")
-        return None
-def verificar_camera(porta, cursor):
-    try:
-        comando_sql = """
-        SELECT local_instalacao FROM transito_cameras
-        WHERE porta = %s;
-        """
-        cursor.execute(comando_sql, (porta,))
-        resultado = cursor.fetchone()
-        if resultado:
-            return  resultado[0],
-            
-        else:
-            return None
-    except Exception as e:
-        print(f"Erro ao verificar camera no banco de dados: {e}")
-        return None
-
 detector_carro = YOLO('yolov8n.pt')
 detector_placa = YOLO("C:\\Users\\12265587630\\Desktop\\best (4).pt")
-cap = cv2.VideoCapture("C:\\Users\\12265587630\\Desktop\\paulo\\ffff.mp4")
+cap = cv2.VideoCapture("C:\\Users\\12265587630\\Desktop\\paulo\\fff.mp4")
 porta = 3
 veiculos = [2, 3, 5, 7]  
-confianca_detectar_carro = 0.5  
-confianca_gravar_texto = 0.5
+confianca_detectar_carro = 0.0  
+confianca_gravar_texto = 0.0
 frame_nmr = -1
 ret = True
 intervalo_frames = 1 
 intervalo_espera = 30
 registro_placas = {}
 
+output_folder = "C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\img_placas_detectadas"
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+    output_folder = "C:\\Users\\12265587630\\Desktop\\Projetoff_ver\\img_placas_detectadas"
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 plt.ion()  
 fig, ax = plt.subplots()
 
@@ -162,7 +103,12 @@ while ret:
                 # Ler o texto da placa
                 texto_detectado, confianca_texto_detectado = ler_placas(placa_carro_crop_thresh)
                 print(f"Texto da placa detectado: {texto_detectado}, Confiança: {confianca_texto_detectado}")
-
+                if(texto_detectado is None):
+                    i = i + 1
+                    filename = os.path.join(output_folder, f"{i}.jpg")
+                    i = i + 1
+                    if not os.path.isfile(filename):
+                      cv2.imwrite(filename, placa_carro_crop)
                 if texto_detectado is not None and confianca_texto_detectado > confianca_gravar_texto:
                     salvar_no_postgres(frame_nmr, car_id, texto_detectado, confianca_texto_detectado)
                     
@@ -187,11 +133,7 @@ while ret:
                             'text_score': confianca_texto_detectado
                         }
                     }
-                    # filename = os.path.join(output_folder, f"{texto_detectado}.jpg")
-                    # if not os.path.isfile(filename):
-                    #     cv2.imwrite(filename, placa_carro_crop)
-                    # else:
-                    #     print("Nenhuma placa reconhecida ou nível de confiança inferior aos anteriores.")
+                    
             else:
                 print(f"Coordenadas de recorte fora dos limites: ({x1}, {y1}), ({x2}, {y2})")
         else:

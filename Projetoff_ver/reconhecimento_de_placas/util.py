@@ -1,13 +1,20 @@
 import string
 import easyocr
 import pandas as pd
+import psycopg2
 
-
+conexao = psycopg2.connect(
+    dbname="pci_transito",
+    user="postgres",
+    password="123456",
+    host="localhost",
+    port="5432"
+)
+cursor = conexao.cursor()
 
 reader = easyocr.Reader(['en'], gpu=False)
 
-
-#Conversões de caracteres nao esperados para esperados se estiver na lista
+# Dicionario de conversões de caracteres entre char e int
 char_to_int = {'O': '0',
                     'I': '1',
                     'J': '3',
@@ -24,7 +31,7 @@ int_to_char = {'0': 'O',
                     '5': 'S',
                     }
 
-
+#Função para definir os formatos de placas que irá ler
 def license_complies_format(text):
       
     if len(text) != 7:
@@ -66,9 +73,10 @@ def license_complies_format(text):
 
     return False
 
+#Função para verificar o formato da placa
+
 def formato_placa(text):
     license_plate_ = ''
-
     for j in range(7):
         if j in [0, 1, 2]:
             if text[j] in int_to_char:
@@ -106,8 +114,8 @@ def formato_placa(text):
 
     return license_plate_
 
+#Funções Banco de dados
 
-#Lê os caracteres que estão na placa
 def ler_placas(placa_carro_crop):
     detections = reader.readtext(placa_carro_crop)
 
@@ -120,8 +128,6 @@ def ler_placas(placa_carro_crop):
             return formato_placa(text), score
 
     return None, None
-
-
 def ler_carro(placa, vehicle_track_ids):
     x1, y1, x2, y2, score, class_id = (*placa, None)
 
@@ -138,29 +144,64 @@ def ler_carro(placa, vehicle_track_ids):
         return vehicle_track_ids[car_indx]
 
     return -1, -1, -1, -1, -1
-
-def escrever_csv(results, output_path):
-    with open(output_path, 'w') as f:
-        f.write('{},{},{},{},{}\n'.format('frame_nmr', 'car_id',
-                                                'license_plate_bbox_score', 'license_number',
-                                                'license_number_score'))
-
-        for frame_nmr in results.keys():
-            for car_id in results[frame_nmr].keys():
-                print(results[frame_nmr][car_id])
-                if 'car' in results[frame_nmr][car_id].keys() and \
-                   'placa' in results[frame_nmr][car_id].keys() and \
-                   'text' in results[frame_nmr][car_id]['placa'].keys():
-                    f.write('{},{},{},{},{}\n'.format(frame_nmr,
-                                                            car_id,
-                                                            
-                                                            results[frame_nmr][car_id]['placa']['bbox_score'],
-                                                            results[frame_nmr][car_id]['placa']['text'],
-                                                            results[frame_nmr][car_id]['placa']['text_score'])
-                            )
-        f.close()
-
-
-
-
-
+def verificar_camera(porta, cursor):
+    try:
+        comando_sql = """
+        SELECT local_instalacao FROM transito_cameras
+        WHERE porta = %s;
+        """
+        cursor.execute(comando_sql, (porta,))
+        resultado = cursor.fetchone()
+        if resultado:
+            return  resultado[0],
+            
+        else:
+            return None
+    except Exception as e:
+        print(f"Erro ao verificar camera no banco de dados: {e}")
+        return None
+def salvar_no_postgres(frame_nmr, car_id, license_number, license_number_score):
+    try:
+        comando_sql = """
+        INSERT INTO transito_leitura (frame_nmr,car_id,license_number,license_number_score)
+        VALUES (%s, %s, %s,%s);
+        """
+        valores = (frame_nmr, car_id,  license_number, license_number_score)
+        cursor.execute(comando_sql, valores)
+        conexao.commit()
+        print(f"Dados do carro {car_id} salvos no banco de dados.")
+    except Exception as e:
+        print(f"Erro ao inserir dados: {e}")    
+        conexao.rollback()
+def salvar_registro_frequencia(data,placa,registro):
+    try:
+        comando_sql = """
+        INSERT INTO transito_registro (data,placa,tipo)
+        VALUES (%s,%s,%s);
+        """
+        valores = (data, placa,registro)
+        cursor.execute(comando_sql, valores)
+        conexao.commit()
+        print("salvo no banco de dados.")
+    except Exception as e:
+        print(f"Erro ao inserir dados: {e}")    
+        conexao.rollback()
+def verificar_placa_registrada(placa, cursor):
+    try:
+        comando_sql = """
+        SELECT proprietario, veiculo, cor FROM transito_placa
+        WHERE placa = %s;
+        """
+        cursor.execute(comando_sql, (placa,))
+        resultado = cursor.fetchone()
+        if resultado:
+            return {
+                "proprietario": resultado[0],
+                "veiculo": resultado[1],
+                "cor": resultado[2]
+            }
+        else:
+            return None
+    except Exception as e:
+        print(f"Erro ao verificar placa no banco de dados: {e}")
+        return None
